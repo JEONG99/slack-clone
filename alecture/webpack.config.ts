@@ -1,15 +1,20 @@
 import path from 'path';
 import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
-import webpack from 'webpack';
+import webpack, { Configuration as WebpackConfiguration } from 'webpack';
+import { Configuration as WebpackDevServerConfiguration } from 'webpack-dev-server';
+
+interface Configuration extends WebpackConfiguration {
+  devServer?: WebpackDevServerConfiguration;
+}
+
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-const config: webpack.Configuration = {
+const config: Configuration = {
   name: 'sleact',
   mode: isDevelopment ? 'development' : 'production',
-  devtool: !isDevelopment ? 'hidden-source-map' : 'eval',
+  devtool: isDevelopment ? 'hidden-source-map' : 'inline-source-map',
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {
@@ -43,10 +48,7 @@ const config: webpack.Configuration = {
           ],
           env: {
             development: {
-              plugins: [['@emotion', { sourceMap: true }], require.resolve('react-refresh/babel')],
-            },
-            production: {
-              plugins: ['@emotion'],
+              plugins: [require.resolve('react-refresh/babel')],
             },
           },
         },
@@ -73,26 +75,24 @@ const config: webpack.Configuration = {
     publicPath: '/dist/',
   },
   devServer: {
-    historyApiFallback: true, // react router
+    historyApiFallback: true,
     port: 3090,
-    publicPath: '/dist/',
-    proxy: {
-      '/api/': {
-        target: 'http://localhost:3095',
-        changeOrigin: true,
-      },
-    },
+    devMiddleware: { publicPath: '/dist/' },
+    static: { directory: path.resolve(__dirname) },
   },
 };
 
 if (isDevelopment && config.plugins) {
   config.plugins.push(new webpack.HotModuleReplacementPlugin());
-  config.plugins.push(new ReactRefreshWebpackPlugin());
-  config.plugins.push(new BundleAnalyzerPlugin({ analyzerMode: 'server', openAnalyzer: true }));
+  config.plugins.push(
+    new ReactRefreshWebpackPlugin({
+      overlay: {
+        useURLPolyfill: true,
+      },
+    }),
+  );
 }
 if (!isDevelopment && config.plugins) {
-  config.plugins.push(new webpack.LoaderOptionsPlugin({ minimize: true }));
-  config.plugins.push(new BundleAnalyzerPlugin({ analyzerMode: 'static' }));
 }
 
 export default config;
