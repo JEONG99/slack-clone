@@ -4,7 +4,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router';
-import { IUser } from '@typings/db';
+import { IChannel, IUser } from '@typings/db';
 import {
   AddButton,
   Channels,
@@ -27,17 +27,34 @@ import { Link } from 'react-router-dom';
 import useInput from '@hooks/useInput';
 import Modal from '@components/Modal';
 import { Button, Input, Label } from '@pages/SignUp/styles';
+import CreateChannelModal from '@components/CreateChannelModal';
+import { useParams } from 'react-router';
+import InviteWorkspaceModal from '@components/InviteWorkspaceModal';
+import InviteChannelModal from '@components/InviteChannelModal';
 
 const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
+  const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
+  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [showInviteWorkspaceModal, setShowInviteWorkspaceModal] = useState(false);
+  const [showInviteChannelModal, setShowInviteChannelModal] = useState(false);
   const [newWorkspace, onChangeNewWorkspace, setNewWorkspace] = useInput('');
   const [newUrl, onChangeNewUrl, setNewUrl] = useInput('');
-
   const { mutate } = useSWRConfig();
-  const { data: userData, error } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher, {
+
+  const { workspace } = useParams<{ workspace: string }>();
+
+  const { data: userData, error: userDataError } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher, {
     dedupingInterval: 100000,
   });
+  const { data: channelData, error: channelDataError } = useSWR<IChannel[]>(
+    userData ? `http://localhost:3095/api/workspaces/${workspace}/channels` : null,
+    fetcher,
+    {
+      dedupingInterval: 100000,
+    },
+  );
 
   const navigate = useNavigate();
 
@@ -92,6 +109,26 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
 
   const onCloseModal = useCallback(() => {
     setShowCreateWorkspaceModal(false);
+    setShowCreateChannelModal(false);
+    setShowWorkspaceModal(false);
+    setShowInviteWorkspaceModal(false);
+    setShowInviteChannelModal(false);
+  }, []);
+
+  const onClickWorkspaceModal = useCallback(() => {
+    setShowWorkspaceModal(true);
+  }, []);
+
+  const onClickAddChannel = useCallback(() => {
+    setShowCreateChannelModal(true);
+  }, []);
+
+  const onClickInviteWorkspace = useCallback(() => {
+    setShowInviteWorkspaceModal(true);
+  }, []);
+
+  const onClickInviteChannel = useCallback(() => {
+    setShowInviteChannelModal(true);
   }, []);
 
   if (!userData) {
@@ -132,8 +169,21 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
           <AddButton onClick={onClickCreateWorkspace}>+</AddButton>
         </Workspaces>
         <Channels>
-          <WorkspaceName>Sleact</WorkspaceName>
-          <MenuScroll>MenuScroll</MenuScroll>
+          <WorkspaceName onClick={onClickWorkspaceModal}>Sleact</WorkspaceName>
+          <MenuScroll>
+            {showWorkspaceModal && (
+              <Menu onCloseModal={onCloseModal} style={{ top: 95, left: 80 }}>
+                <WorkspaceModal>
+                  <h2>Sleact</h2>
+                  <button onClick={onClickAddChannel}>채널 만들기</button>
+                  <button onClick={onLogout}>로그아웃</button>
+                </WorkspaceModal>
+              </Menu>
+            )}
+            {channelData?.map((channel) => {
+              return <div>{channel.name}</div>;
+            })}
+          </MenuScroll>
         </Channels>
         <Chats>{children}</Chats>
       </WorkspaceWrapper>
@@ -150,6 +200,9 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
           <Button type="submit">생성하기</Button>
         </form>
       </Modal>
+      <CreateChannelModal show={showCreateChannelModal} onCloseModal={onCloseModal} />
+      <InviteWorkspaceModal show={showInviteWorkspaceModal} onCloseModal={onCloseModal} />
+      <InviteChannelModal show={showInviteChannelModal} onCloseModal={onCloseModal} />
     </div>
   );
 };

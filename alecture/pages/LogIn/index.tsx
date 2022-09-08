@@ -40,7 +40,7 @@ const LogIn = () => {
   useEffect(() => {
     if (data) {
       console.log(data);
-      navigate('/workspace/channel');
+      navigate('/workspace/sleact/channel/일반');
     }
   }, [navigate, data]);
 
