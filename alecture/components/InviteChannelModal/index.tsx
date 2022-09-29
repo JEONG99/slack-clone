@@ -27,7 +27,7 @@ const InviteChannelModal: FC<Props> = ({ show, onCloseModal }) => {
           email: newMember,
         })
         .then(() => {
-          mutate(`http://localhost/api/workspaces/${workspace}/channels/${channel}/members`);
+          mutate(`/api/workspaces/${workspace}/channels/${channel}/members`);
           onCloseModal();
           setNewMember('');
         })
@@ -36,7 +36,7 @@ const InviteChannelModal: FC<Props> = ({ show, onCloseModal }) => {
           toast.error(error.response?.data, { position: 'bottom-center' });
         });
     },
-    [channel, newMember, onCloseModal, workspace],
+    [channel, newMember, onCloseModal, workspace, mutate, setNewMember],
   );
 
   return (

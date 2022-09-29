@@ -1,5 +1,5 @@
 import fetcher from '@utils/fetcher';
-import React, { FC, useCallback, useState } from 'react';
+import React, { FC, useCallback, useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -31,6 +31,9 @@ import CreateChannelModal from '@components/CreateChannelModal';
 import { useParams } from 'react-router';
 import InviteWorkspaceModal from '@components/InviteWorkspaceModal';
 import InviteChannelModal from '@components/InviteChannelModal';
+import ChannelList from '@components/ChannelList';
+import DMList from '@components/DMList';
+import useSocket from '@hooks/useSocket';
 
 const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -43,28 +46,46 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [newUrl, onChangeNewUrl, setNewUrl] = useInput('');
   const { mutate } = useSWRConfig();
 
-  const { workspace } = useParams<{ workspace: string }>();
+  const { workspace, channel } = useParams<{ workspace: string; channel: string }>();
 
-  const { data: userData, error: userDataError } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher, {
+  const { data: userData, error: userDataError } = useSWR<IUser | false>('/api/users', fetcher, {
     dedupingInterval: 100000,
   });
   const { data: channelData, error: channelDataError } = useSWR<IChannel[]>(
-    userData ? `http://localhost:3095/api/workspaces/${workspace}/channels` : null,
+    userData ? `/api/workspaces/${workspace}/channels` : null,
     fetcher,
     {
       dedupingInterval: 100000,
     },
   );
-
+  const { data: membersData, error: membersDataError } = useSWR<IUser[]>(
+    userData ? `/api/workspaces/${workspace}//members` : null,
+    fetcher,
+    {
+      dedupingInterval: 100000,
+    },
+  );
   const navigate = useNavigate();
+  const [socket, disconnect] = useSocket(workspace);
+
+  useEffect(() => {
+    if (channelData && userData && socket) {
+      socket.emit('login', { id: userData.id, channels: channelData.map((v) => v.id) });
+    }
+  }, [socket, userData, channelData]);
+  useEffect(() => {
+    return () => {
+      disconnect();
+    };
+  }, [workspace, disconnect]);
 
   const onLogout = useCallback(() => {
     axios
-      .post('http://localhost:3095/api/users/logout', null, {
+      .post('/api/users/logout', null, {
         withCredentials: true,
       })
       .then(() => {
-        mutate('http://localhost:3095/api/users', false, { revalidate: false });
+        mutate('/api/users', false, { revalidate: false });
       });
   }, []);
 
@@ -84,7 +105,7 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
       if (!newUrl || !newUrl.trim()) return;
       axios
         .post(
-          'http://localhost:3095/api/workspaces',
+          '/api/workspaces',
           {
             workspace: newWorkspace,
             url: newUrl,
@@ -94,7 +115,7 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
           },
         )
         .then(() => {
-          mutate('http://localhost:3095/api/users');
+          mutate('/api/users');
           setShowCreateWorkspaceModal(false);
           setNewWorkspace('');
           setNewUrl('');
@@ -180,9 +201,8 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
                 </WorkspaceModal>
               </Menu>
             )}
-            {channelData?.map((channel) => {
-              return <div>{channel.name}</div>;
-            })}
+            <ChannelList></ChannelList>
+            <DMList></DMList>
           </MenuScroll>
         </Channels>
         <Chats>{children}</Chats>

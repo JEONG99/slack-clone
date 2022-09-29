@@ -7,7 +7,7 @@ import fetcher from '@utils/fetcher';
 import useSWR from 'swr';
 
 const SignUp = () => {
-  const { data, error } = useSWR('http://localhost:3095/api/users', fetcher, {
+  const { data, error } = useSWR('/api/users', fetcher, {
     dedupingInterval: 100000,
   });
 
@@ -30,7 +30,7 @@ const SignUp = () => {
         setSignUpError('');
         setSignUpSuccess(false);
         axios
-          .post('http://localhost:3095/api/users', {
+          .post('/api/users', {
             email,
             nickname,
             password,

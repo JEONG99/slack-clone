@@ -22,7 +22,7 @@ const CreateChannelModal: FC<Props> = ({ show, onCloseModal }) => {
       e.preventDefault();
       axios
         .post(
-          `http://localhost:3095/api/workspaces/${workspace}/channels`,
+          `/api/workspaces/${workspace}/channels`,
           {
             name: newChannel,
           },
@@ -32,7 +32,7 @@ const CreateChannelModal: FC<Props> = ({ show, onCloseModal }) => {
         )
         .then(() => {
           setNewChannel('');
-          mutate(`http://localhost:3095/api/workspaces/${workspace}/channels`);
+          mutate(`/api/workspaces/${workspace}/channels`);
           onCloseModal();
         })
         .catch((error) => {
